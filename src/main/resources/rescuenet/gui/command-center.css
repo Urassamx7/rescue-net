@@ -1,0 +1,191 @@
+.root {
+    -fx-font-family: "Segoe UI", "Candara", "Calibri", sans-serif;
+    -fx-font-size: 13px;
+    -fx-background-color: #10140c;
+    -fx-text-fill: #ebe4cf;
+}
+
+.header {
+    -fx-background-color: linear-gradient(to bottom, #1a2210, #13180c);
+    -fx-padding: 18 28 16 28;
+    -fx-border-color: transparent transparent #3a4a1a transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.wordmark {
+    -fx-font-family: "Bahnschrift", "Segoe UI Semibold", "Segoe UI", sans-serif;
+    -fx-font-size: 28px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #f3ead0;
+    -fx-letter-spacing: 0.08em;
+}
+
+.tagline {
+    -fx-text-fill: #c4b48a;
+    -fx-font-size: 12px;
+}
+
+.meta {
+    -fx-text-fill: #e2b13c;
+    -fx-font-family: "Consolas", "Cascadia Mono", monospace;
+    -fx-font-size: 12px;
+}
+
+.clock {
+    -fx-font-family: "Consolas", "Cascadia Mono", monospace;
+    -fx-font-size: 22px;
+    -fx-text-fill: #f0d27a;
+}
+
+.failover {
+    -fx-background-color: #5a1d16;
+    -fx-padding: 12 24;
+    -fx-border-color: #e0544a;
+    -fx-border-width: 0 0 1 0;
+}
+
+.failover-title {
+    -fx-font-size: 12px;
+    -fx-text-fill: #f3b3ad;
+    -fx-font-weight: 700;
+}
+
+.failover-body {
+    -fx-font-size: 15px;
+    -fx-text-fill: #ffe8e4;
+}
+
+.workspace {
+    -fx-padding: 18 22 12 22;
+    -fx-spacing: 18;
+}
+
+.panel {
+    -fx-background-color: #171c12;
+    -fx-padding: 16 16 12 16;
+    -fx-background-radius: 4;
+}
+
+.panel-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #e2b13c;
+    -fx-padding: 0 0 10 0;
+}
+
+.table-view {
+    -fx-background-color: transparent;
+    -fx-control-inner-background: #171c12;
+    -fx-table-cell-border-color: #2a331c;
+    -fx-text-background-color: #ebe4cf;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #10140c;
+}
+
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: #10140c;
+    -fx-border-color: transparent transparent #3a4a1a transparent;
+    -fx-size: 28px;
+}
+
+.table-view .label {
+    -fx-text-fill: #c4b48a;
+    -fx-font-size: 11px;
+}
+
+.table-row-cell {
+    -fx-background-color: #171c12;
+    -fx-border-color: transparent;
+}
+
+.table-row-cell:odd {
+    -fx-background-color: #1c2316;
+}
+
+.table-row-cell:selected {
+    -fx-background-color: #2e3a18;
+}
+
+.table-cell {
+    -fx-text-fill: #ebe4cf;
+    -fx-font-family: "Consolas", "Cascadia Mono", "Segoe UI", monospace;
+    -fx-font-size: 12px;
+}
+
+.badge-online { -fx-text-fill: #8fd18a; }
+.badge-offline { -fx-text-fill: #e0544a; }
+.badge-mission { -fx-text-fill: #e2b13c; }
+.badge-return { -fx-text-fill: #8ebdd4; }
+
+.form-grid {
+    -fx-hgap: 10;
+    -fx-vgap: 10;
+}
+
+.form-label {
+    -fx-text-fill: #c4b48a;
+}
+
+.text-field, .combo-box {
+    -fx-background-color: #10140c;
+    -fx-text-fill: #ebe4cf;
+    -fx-prompt-text-fill: #7d7358;
+    -fx-background-radius: 2;
+    -fx-border-color: #3a4a1a;
+    -fx-border-radius: 2;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: #ebe4cf;
+    -fx-background-color: #10140c;
+}
+
+.button {
+    -fx-background-color: #e2b13c;
+    -fx-text-fill: #1a1608;
+    -fx-font-weight: 700;
+    -fx-padding: 10 16;
+    -fx-background-radius: 2;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #f0c45a;
+}
+
+.button:disabled {
+    -fx-opacity: 0.4;
+}
+
+.ghost {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e2b13c;
+    -fx-border-color: #e2b13c;
+    -fx-border-radius: 2;
+}
+
+.map-canvas {
+    -fx-background-color: #0d1209;
+}
+
+.hint {
+    -fx-text-fill: #8a7f62;
+    -fx-font-size: 12px;
+}
+
+.alert-log {
+    -fx-background-color: #10140c;
+    -fx-control-inner-background: #10140c;
+    -fx-text-fill: #c4b48a;
+    -fx-font-family: "Consolas", "Cascadia Mono", monospace;
+    -fx-font-size: 11px;
+    -fx-border-color: #2a331c;
+}
+
+.status-bar {
+    -fx-padding: 8 22 10 22;
+    -fx-text-fill: #8a7f62;
+    -fx-border-color: #2a331c transparent transparent transparent;
+}
