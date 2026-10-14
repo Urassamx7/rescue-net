@@ -189,3 +189,36 @@
     -fx-text-fill: #8a7f62;
     -fx-border-color: #2a331c transparent transparent transparent;
 }
+
+.link-chip {
+    -fx-font-family: "Bahnschrift", "Segoe UI Semibold", "Segoe UI", sans-serif;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-letter-spacing: 0.06em;
+}
+
+.link-ok { -fx-text-fill: #8fd18a; }
+.link-wait { -fx-text-fill: #e2b13c; }
+.link-down { -fx-text-fill: #e0544a; }
+
+.metric-value {
+    -fx-font-family: "Consolas", "Cascadia Mono", monospace;
+    -fx-font-size: 14px;
+    -fx-text-fill: #f3ead0;
+}
+
+.progress-bar {
+    -fx-pref-height: 10;
+}
+
+.progress-bar > .track {
+    -fx-background-color: #10140c;
+    -fx-background-radius: 2;
+}
+
+.progress-bar > .bar {
+    -fx-background-color: #8fd18a;
+    -fx-background-radius: 2;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}

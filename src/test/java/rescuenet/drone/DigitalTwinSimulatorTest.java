@@ -51,6 +51,21 @@ class DigitalTwinSimulatorTest {
         assertEquals("MIS-002", twin.snapshot("127.0.0.1", "Maputo").missionId());
     }
 
+    @Test
+    void keepsCurrentMissionAndEventLog() {
+        twin = new DigitalTwinSimulator("DR-003", new Coordinates(-25.97, 32.57), 90);
+        Mission mission = mission("MIS-010");
+
+        assertTrue(twin.assign(mission));
+        assertEquals("MIS-010", twin.currentMission().id());
+        assertEquals("Zona B", twin.currentMission().zoneName());
+        assertFalse(twin.recentEvents().isEmpty());
+        assertTrue(twin.recentEvents().getLast().contains("MIS-010"));
+
+        twin.abort("gui");
+        assertNull(twin.currentMission());
+    }
+
     private static Mission mission(String id) {
         return new Mission(
                 id,

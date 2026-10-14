@@ -20,23 +20,28 @@ public final class DroneServer {
         double battery = cli.optDouble("battery", 90);
         String central = cli.opt("central", "127.0.0.1:1099");
         String hostname = cli.opt("hostname", NetworkAddresses.localHostName());
+        int listen = cli.optInt("listen", 1101);
 
         System.setProperty("java.rmi.server.hostname", hostname);
 
-        String[] centralParts = central.split(":");
-        String centralHost = centralParts[0];
-        int centralPort = centralParts.length > 1 ? Integer.parseInt(centralParts[1]) : 1099;
-        String directoryUrl = NetworkAddresses.rmiUrl(centralHost, centralPort, FleetDirectory.BIND_NAME);
+        String directoryUrl = directoryUrl(central);
 
         DroneServiceImpl drone = new DroneServiceImpl(
                 id,
                 hostname,
                 baseName,
                 new Coordinates(lat, lon),
-                battery
+                battery,
+                listen
         );
 
-        System.out.printf("[%s] a ligar ao Command Center em %s (hostname RMI=%s)%n", id, directoryUrl, hostname);
+        System.out.printf(
+                "[%s] a ligar ao Command Center em %s (hostname RMI=%s listen=%d)%n",
+                id,
+                directoryUrl,
+                hostname,
+                listen
+        );
 
         FleetDirectory directory = waitForDirectory(directoryUrl);
         directory.join(drone.getSnapshot(), drone);
@@ -55,12 +60,23 @@ public final class DroneServer {
         Thread.currentThread().join();
     }
 
-    private static FleetDirectory waitForDirectory(String url) throws InterruptedException {
+    public static String directoryUrl(String central) {
+        String[] centralParts = central.split(":");
+        String centralHost = centralParts[0];
+        int centralPort = centralParts.length > 1 ? Integer.parseInt(centralParts[1]) : 1099;
+        return NetworkAddresses.rmiUrl(centralHost, centralPort, FleetDirectory.BIND_NAME);
+    }
+
+    public static FleetDirectory lookup(String url) throws Exception {
+        return (FleetDirectory) Naming.lookup(url);
+    }
+
+    static FleetDirectory waitForDirectory(String url) throws InterruptedException {
         long deadline = System.currentTimeMillis() + 30_000;
         Exception last = null;
         while (System.currentTimeMillis() < deadline) {
             try {
-                return (FleetDirectory) Naming.lookup(url);
+                return lookup(url);
             } catch (Exception error) {
                 last = error;
                 System.out.println("[drone] registry da Central ainda não disponível, a repetir...");

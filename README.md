@@ -48,12 +48,12 @@ scripts\start-local-demo.bat
 
 Abre o Command Center e três drones:
 
-| Nó | ID | Base | Bateria inicial |
-|---|---|---|---|
-| Central | Command Center | registry `:1099` | — |
-| Drone 1 | DR-001 | Maputo | 90% |
-| Drone 2 | DR-002 | Matola | 76% |
-| Drone 3 | DR-003 | Marracuene | 95% |
+| Nó | ID | Base | Portas | Bateria inicial |
+|---|---|---|---|---|
+| Central | Command Center | — | registry `:1099`, objeto `:1100` | — |
+| Drone 1 | DR-001 | Maputo | listen `:1101` | 90% |
+| Drone 2 | DR-002 | Matola | listen `:1102` | 76% |
+| Drone 3 | DR-003 | Marracuene | listen `:1103` | 95% |
 
 1. Confirma os três drones **ONLINE / DISPONÍVEL**.
 2. Cria uma ocorrência **Busca e salvamento / Zona A / Prioridade HIGH**.
@@ -64,9 +64,11 @@ Abre o Command Center e três drones:
 Arranque manual:
 
 ```bat
-scripts\start-central.bat
-scripts\start-drone.bat --id DR-001 --base Maputo --lat -25.9692 --lon 32.5732 --battery 90 --central 127.0.0.1:1099 --hostname 127.0.0.1
+scripts\start-central.bat --port 1099 --bind 1100
+scripts\start-drone.bat --id DR-001 --base Maputo --lat -25.9692 --lon 32.5732 --battery 90 --central 127.0.0.1:1099 --hostname 127.0.0.1 --listen 1101
 ```
+
+`start-drone.bat` abre a consola JavaFX do nó. O processo headless `DroneServer` continua disponível via `mvnw.cmd exec:java`.
 
 ## Demo em 4 PCs (LAN)
 
@@ -74,24 +76,28 @@ Todos os PCs na mesma rede. IPs de exemplo do enunciado:
 
 | Papel | IP | Comando |
 |---|---|---|
-| Central | 192.168.1.10 | `scripts\start-central.bat --port 1099` |
-| DR-001 | 192.168.1.11 | `scripts\start-drone.bat --id DR-001 --base Maputo --lat -25.9692 --lon 32.5732 --battery 90 --central 192.168.1.10:1099 --hostname 192.168.1.11` |
-| DR-002 | 192.168.1.12 | `scripts\start-drone.bat --id DR-002 --base Matola --lat -25.9622 --lon 32.4589 --battery 76 --central 192.168.1.10:1099 --hostname 192.168.1.12` |
-| DR-003 | 192.168.1.13 | `scripts\start-drone.bat --id DR-003 --base Marracuene --lat -25.7369 --lon 32.6744 --battery 95 --central 192.168.1.10:1099 --hostname 192.168.1.13` |
+| Central | 192.168.1.10 | `scripts\start-central.bat --port 1099 --bind 1100` |
+| DR-001 | 192.168.1.11 | `scripts\start-drone.bat --id DR-001 --base Maputo --lat -25.9692 --lon 32.5732 --battery 90 --central 192.168.1.10:1099 --hostname 192.168.1.11 --listen 1101` |
+| DR-002 | 192.168.1.12 | `scripts\start-drone.bat --id DR-002 --base Matola --lat -25.9622 --lon 32.4589 --battery 76 --central 192.168.1.10:1099 --hostname 192.168.1.12 --listen 1101` |
+| DR-003 | 192.168.1.13 | `scripts\start-drone.bat --id DR-003 --base Marracuene --lat -25.7369 --lon 32.6744 --battery 95 --central 192.168.1.10:1099 --hostname 192.168.1.13 --listen 1101` |
 
 `--hostname` tem de ser o IP visível na LAN (`java.rmi.server.hostname`). Sem isso o stub aponta para localhost e o Central não consegue invocar o drone.
+
+O lookup usa a porta **1099**. O objeto da central escuta em **1100** (`--bind`) e cada drone escuta em **1101** (`--listen`). Sem estas portas fixas o firewall da outra máquina corta o heartbeat.
+
+Passo a passo (firewall, IPs, comandos e falhas): **[README-connections.md](README-connections.md)**. Num PC, uma vez: `scripts\allow-lan.bat` (consola como Administrador).
 
 Simular falha física: desligar o Wi-Fi ou o cabo do PC do drone em missão. O heartbeat (~2 s, timeout 1,5 s) marca o nó OFFLINE e reatribui.
 
 ## Arquitectura RMI
 
-O registry vive só no PC Central (`LocateRegistry.createRegistry(1099)`), com o nome `RescueNet`.
+O registry vive só no PC Central (`LocateRegistry.createRegistry(1099)`), com o nome `RescueNet`. O objeto `FleetDirectory` exporta-se à parte na porta **1100**.
 
-O RMI Registry recusa `bind`/`rebind` vindos de outro host. Por isso cada drone **exporta** o `DroneService` na sua JVM e chama `FleetDirectory.join` no Central, passando o stub. O Central guarda esses stubs e usa-os no heartbeat, na alocação e no failover.
+O RMI Registry recusa `bind`/`rebind` vindos de outro host. Por isso cada drone **exporta** o `DroneService` na sua JVM (porta **1101**) e chama `FleetDirectory.join` no Central, passando o stub. O Central guarda esses stubs e usa-os no heartbeat, na alocação e no failover.
 
 ```
-Drone JVM  -- join(stub) -->  Central registry :1099 / RescueNet
-Central     -- getSnapshot / assignMission -->  Drone JVM
+Drone JVM  -- join(stub) -->  Central registry :1099 / RescueNet  (objeto :1100)
+Central     -- getSnapshot / assignMission -->  Drone JVM :1101
 ```
 
 ## Módulos
@@ -100,7 +106,7 @@ Central     -- getSnapshot / assignMission -->  Drone JVM
 rescuenet.common   contrato RMI e DTOs serializáveis
 rescuenet.drone    DroneServer, digital twin (bateria e movimento)
 rescuenet.central  registry, selecção, heartbeat, reatribuição
-rescuenet.gui      Command Center JavaFX
+rescuenet.gui      Command Center e consola do drone (JavaFX)
 ```
 
 ## Maven (alternativo)
@@ -110,5 +116,5 @@ mvnw.cmd -v
 mvnw.cmd test
 mvnw.cmd verify
 mvnw.cmd javafx:run
-mvnw.cmd exec:java -Dexec.mainClass=rescuenet.drone.DroneServer -Dexec.args="--id DR-001 --base Maputo --lat -25.9692 --lon 32.5732 --battery 90 --central 127.0.0.1:1099 --hostname 127.0.0.1"
+mvnw.cmd exec:java -Dexec.mainClass=rescuenet.drone.DroneServer -Dexec.args="--id DR-001 --base Maputo --lat -25.9692 --lon 32.5732 --battery 90 --central 127.0.0.1:1099 --hostname 127.0.0.1 --listen 1101"
 ```

@@ -5,7 +5,9 @@ import rescuenet.common.DroneSnapshot;
 import rescuenet.common.DroneState;
 import rescuenet.common.Mission;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +27,7 @@ final class DigitalTwinSimulator implements AutoCloseable {
     private Coordinates location;
     private Mission mission;
     private int lingerTicks;
+    private final CopyOnWriteArrayList<String> events = new CopyOnWriteArrayList<>();
 
     DigitalTwinSimulator(String droneId, Coordinates base, double batteryPercent) {
         this.droneId = droneId;
@@ -79,6 +82,14 @@ final class DigitalTwinSimulator implements AutoCloseable {
 
     synchronized DroneState state() {
         return state;
+    }
+
+    synchronized Mission currentMission() {
+        return mission == null ? null : mission.copy();
+    }
+
+    List<String> recentEvents() {
+        return List.copyOf(events);
     }
 
     private int statusLogTicks;
@@ -141,7 +152,12 @@ final class DigitalTwinSimulator implements AutoCloseable {
     }
 
     private void log(String message) {
-        System.out.printf("[%s] %s%n", droneId, message);
+        String line = "[%s] %s".formatted(droneId, message);
+        System.out.println(line);
+        events.add(line);
+        if (events.size() > 40) {
+            events.remove(0);
+        }
     }
 
     private static double clamp(double value) {

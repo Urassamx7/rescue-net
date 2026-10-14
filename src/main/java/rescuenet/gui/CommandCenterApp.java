@@ -62,7 +62,8 @@ public final class CommandCenterApp extends Application {
     public static void main(String[] args) throws Exception {
         CliArgs cli = CliArgs.parse(args);
         int port = cli.optInt("port", 1099);
-        bootServer = EmergencyServer.start(port);
+        int bind = cli.optInt("bind", 1100);
+        bootServer = EmergencyServer.start(port, bind);
         launch(args);
     }
 
@@ -86,11 +87,18 @@ public final class CommandCenterApp extends Application {
         server.addListener(new UiListener());
         refresh();
         startClock();
-        registryMeta.setText("rmi://%s:%d/%s".formatted(
-                NetworkAddresses.localHostName(),
-                server.port(),
-                "RescueNet"
-        ));
+        String host = NetworkAddresses.localHostName();
+        if (server.bindPort() == 0) {
+            registryMeta.setText("rmi://%s:%d/%s".formatted(host, server.port(), "RescueNet"));
+        } else {
+            registryMeta.setText("rmi://%s:%d/%s  ·  objeto %s:%d".formatted(
+                    host,
+                    server.port(),
+                    "RescueNet",
+                    host,
+                    server.bindPort()
+            ));
+        }
         stage.setOnCloseRequest(_ -> {
             server.stop();
             Platform.exit();

@@ -11,8 +11,8 @@ import rescuenet.common.MissionType;
 import rescuenet.common.NetworkAddresses;
 import rescuenet.common.Priority;
 
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
+import java.rmi.RemoteException; // Criar server remoto
+import java.rmi.registry.LocateRegistry; // Fazer append com o server e criar porta
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class EmergencyServer extends UnicastRemoteObject implements FleetDirectory {
     private final int port;
+    private final int bindPort;
     private final Map<String, TrackedDrone> fleet = new ConcurrentHashMap<>();
     private final Map<String, Mission> missions = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<EmergencyListener> listeners = new CopyOnWriteArrayList<>();
@@ -33,32 +34,53 @@ public final class EmergencyServer extends UnicastRemoteObject implements FleetD
     private final HeartbeatMonitor heartbeat;
     private Registry registry;
 
-    private EmergencyServer(int port) throws RemoteException {
-        super();
+    private EmergencyServer(int port, int bindPort) throws RemoteException {
+        super(bindPort);
         this.port = port;
+        this.bindPort = bindPort;
         this.heartbeat = new HeartbeatMonitor(this);
     }
 
     public static EmergencyServer start(int port) throws RemoteException {
+        return start(port, 0);
+    }
+
+    public static EmergencyServer start(int port, int bindPort) throws RemoteException {
         String hostname = System.getProperty("java.rmi.server.hostname");
         if (hostname == null || hostname.isBlank()) {
             System.setProperty("java.rmi.server.hostname", NetworkAddresses.localHostName());
         }
-        EmergencyServer server = new EmergencyServer(port);
-        server.registry = LocateRegistry.createRegistry(port);
+        EmergencyServer server = new EmergencyServer(port, bindPort);
+        server.registry = LocateRegistry.createRegistry(port); // Criando registo da porta
         server.registry.rebind(FleetDirectory.BIND_NAME, server);
         server.heartbeat.start();
-        System.out.printf(
-                "[central] RescueNet no ar — registry rmi://%s:%d/%s%n",
-                NetworkAddresses.localHostName(),
-                port,
-                FleetDirectory.BIND_NAME
-        );
+        String host = NetworkAddresses.localHostName();
+        if (bindPort == 0) {
+            System.out.printf(
+                    "[central] RescueNet no ar — registry rmi://%s:%d/%s%n",
+                    host,
+                    port,
+                    FleetDirectory.BIND_NAME
+            );
+        } else {
+            System.out.printf(
+                    "[central] RescueNet no ar — registry rmi://%s:%d/%s · objeto %s:%d%n",
+                    host,
+                    port,
+                    FleetDirectory.BIND_NAME,
+                    host,
+                    bindPort
+            );
+        }
         return server;
     }
 
     public int port() {
         return port;
+    }
+
+    public int bindPort() {
+        return bindPort;
     }
 
     public void addListener(EmergencyListener listener) {
@@ -119,6 +141,7 @@ public final class EmergencyServer extends UnicastRemoteObject implements FleetD
         return List.copyOf(alerts);
     }
 
+    // Criar missão
     public synchronized Mission createEmergency(MissionType type, String zoneName, Coordinates destination, Priority priority) {
         String id = "MIS-%03d".formatted(missionSeq.incrementAndGet());
         Mission mission = new Mission(id, type, zoneName, destination, priority);
@@ -166,7 +189,7 @@ public final class EmergencyServer extends UnicastRemoteObject implements FleetD
         reassignAfterFailure(droneId, offline.missionId());
         notifyFleet();
     }
-
+    // Finalizar missão
     private void dispatch(Mission mission) {
         Optional<TrackedDrone> chosen = SelectionAlgorithm.select(fleet.values(), mission.destination());
         if (chosen.isEmpty()) {
@@ -177,6 +200,7 @@ public final class EmergencyServer extends UnicastRemoteObject implements FleetD
         assignTo(mission, chosen.get(), "Alocado por bateria e proximidade");
     }
 
+    // Alocar missão ao drone mais próximo da occorência
     private void assignTo(Mission mission, TrackedDrone drone, String event) {
         try {
             boolean accepted = drone.stub().assignMission(mission.copy());
@@ -204,7 +228,7 @@ public final class EmergencyServer extends UnicastRemoteObject implements FleetD
             pushAlert("Não foi possível alocar %s a %s".formatted(mission.id(), drone.id()));
         }
     }
-
+    // Realocar quando um drone cai
     private void reassignAfterFailure(String failedDroneId, String missionId) {
         if (missionId == null) {
             for (Mission mission : missions.values()) {
