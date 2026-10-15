@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class EmergencyServer extends UnicastRemoteObject implements FleetDirectory {
     private final int port;
     private final int bindPort;
+    private final String advertisedHost;
     private final Map<String, TrackedDrone> fleet = new ConcurrentHashMap<>();
     private final Map<String, Mission> missions = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<EmergencyListener> listeners = new CopyOnWriteArrayList<>();
@@ -34,41 +35,50 @@ public final class EmergencyServer extends UnicastRemoteObject implements FleetD
     private final HeartbeatMonitor heartbeat;
     private Registry registry;
 
-    private EmergencyServer(int port, int bindPort) throws RemoteException {
+    private EmergencyServer(int port, int bindPort, String advertisedHost) throws RemoteException {
         super(bindPort);
         this.port = port;
         this.bindPort = bindPort;
+        this.advertisedHost = advertisedHost;
         this.heartbeat = new HeartbeatMonitor(this);
     }
 
     public static EmergencyServer start(int port) throws RemoteException {
-        return start(port, 0);
+        return start(port, 0, null);
     }
 
     public static EmergencyServer start(int port, int bindPort) throws RemoteException {
-        String hostname = System.getProperty("java.rmi.server.hostname");
-        if (hostname == null || hostname.isBlank()) {
-            System.setProperty("java.rmi.server.hostname", NetworkAddresses.localHostName());
+        return start(port, bindPort, null);
+    }
+
+    public static EmergencyServer start(int port, int bindPort, String hostname) throws RemoteException {
+        String advertised = hostname;
+        if (advertised == null || advertised.isBlank()) {
+            advertised = System.getProperty("java.rmi.server.hostname");
         }
-        EmergencyServer server = new EmergencyServer(port, bindPort);
+        if (advertised == null || advertised.isBlank()) {
+            advertised = NetworkAddresses.localHostName();
+        }
+        advertised = advertised.trim();
+        System.setProperty("java.rmi.server.hostname", advertised);
+        EmergencyServer server = new EmergencyServer(port, bindPort, advertised);
         server.registry = LocateRegistry.createRegistry(port); // Criando registo da porta
         server.registry.rebind(FleetDirectory.BIND_NAME, server);
         server.heartbeat.start();
-        String host = NetworkAddresses.localHostName();
         if (bindPort == 0) {
             System.out.printf(
                     "[central] RescueNet no ar — registry rmi://%s:%d/%s%n",
-                    host,
+                    advertised,
                     port,
                     FleetDirectory.BIND_NAME
             );
         } else {
             System.out.printf(
                     "[central] RescueNet no ar — registry rmi://%s:%d/%s · objeto %s:%d%n",
-                    host,
+                    advertised,
                     port,
                     FleetDirectory.BIND_NAME,
-                    host,
+                    advertised,
                     bindPort
             );
         }
@@ -81,6 +91,10 @@ public final class EmergencyServer extends UnicastRemoteObject implements FleetD
 
     public int bindPort() {
         return bindPort;
+    }
+
+    public String advertisedHost() {
+        return advertisedHost;
     }
 
     public void addListener(EmergencyListener listener) {

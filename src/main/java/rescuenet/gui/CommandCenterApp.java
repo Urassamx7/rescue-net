@@ -8,7 +8,6 @@ import rescuenet.common.DroneSnapshot;
 import rescuenet.common.DroneState;
 import rescuenet.common.Mission;
 import rescuenet.common.MissionType;
-import rescuenet.common.NetworkAddresses;
 import rescuenet.common.Priority;
 
 import javafx.animation.KeyFrame;
@@ -63,7 +62,8 @@ public final class CommandCenterApp extends Application {
         CliArgs cli = CliArgs.parse(args);
         int port = cli.optInt("port", 1099);
         int bind = cli.optInt("bind", 1100);
-        bootServer = EmergencyServer.start(port, bind);
+        String hostname = cli.opt("hostname", "");
+        bootServer = EmergencyServer.start(port, bind, hostname.isBlank() ? null : hostname);
         launch(args);
     }
 
@@ -87,7 +87,7 @@ public final class CommandCenterApp extends Application {
         server.addListener(new UiListener());
         refresh();
         startClock();
-        String host = NetworkAddresses.localHostName();
+        String host = server.advertisedHost();
         if (server.bindPort() == 0) {
             registryMeta.setText("rmi://%s:%d/%s".formatted(host, server.port(), "RescueNet"));
         } else {

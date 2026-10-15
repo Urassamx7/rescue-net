@@ -76,7 +76,7 @@ Todos os PCs na mesma rede. IPs de exemplo do enunciado:
 
 | Papel | IP | Comando |
 |---|---|---|
-| Central | 192.168.1.10 | `scripts\start-central.bat --port 1099 --bind 1100` |
+| Central | 192.168.1.10 | `scripts\start-central.bat --port 1099 --bind 1100 --hostname 192.168.1.10` |
 | DR-001 | 192.168.1.11 | `scripts\start-drone.bat --id DR-001 --base Maputo --lat -25.9692 --lon 32.5732 --battery 90 --central 192.168.1.10:1099 --hostname 192.168.1.11 --listen 1101` |
 | DR-002 | 192.168.1.12 | `scripts\start-drone.bat --id DR-002 --base Matola --lat -25.9622 --lon 32.4589 --battery 76 --central 192.168.1.10:1099 --hostname 192.168.1.12 --listen 1101` |
 | DR-003 | 192.168.1.13 | `scripts\start-drone.bat --id DR-003 --base Marracuene --lat -25.7369 --lon 32.6744 --battery 95 --central 192.168.1.10:1099 --hostname 192.168.1.13 --listen 1101` |

@@ -125,7 +125,13 @@ No **PC A**:
 scripts\start-central.bat --port 1099 --bind 1100
 ```
 
-O canto da janela tem de mostrar o IPv4 **deste** PC, por exemplo:
+O programa ignora VMware/VMnet e prefere o Wi-Fi. Se o cabeçalho ainda mostrar um IP de máquina virtual, força o IPv4 da placa em que o outro PC está:
+
+```bat
+scripts\start-central.bat --port 1099 --bind 1100 --hostname 192.168.17.204
+```
+
+O canto da janela tem de mostrar o IPv4 **desta** LAN (o do Wi-Fi/cabo, não VMnet), por exemplo:
 
 ```
 rmi://192.168.1.10:1099/RescueNet  ·  objeto 192.168.1.10:1100
@@ -190,6 +196,7 @@ scripts\start-drone.bat --id DR-002 --base Matola --lat -25.9622 --lon 32.4589 -
 | Join no A e logo **OFFLINE** | `--hostname` no B é `127.0.0.1`, ou 1101 fechada no B | `--hostname` = IP do **PC B**; `allow-lan.bat` no **PC B** |
 | «Última chamada da central» no B não muda | O PC A não entra na 1101 do B | Firewall / `java.exe` no **PC B**; `--listen 1101` |
 | Cabeçalho do A com `127.0.0.1` | A JVM do A anunciou loopback | Reiniciar o Central no A; usar o IPv4 da LAN |
+| Cabeçalho do A com `192.168.225.x` / `192.168.190.x` | Ainda anunciou VMware | `--hostname` com o IPv4 do Wi-Fi do A |
 | `already bound` no A | Já há um Command Center nesse PC | Fechar a janela antiga no A |
 
 Desligar o Wi-Fi ou o cabo do PC B em missão é a falha física: o A marca timeout (~2 s + 1,5 s) e reatribui a outro drone **ONLINE**.

@@ -21,6 +21,13 @@ class CliArgsTest {
     }
 
     @Test
+    void parsesEqualsForm() {
+        CliArgs args = CliArgs.parse(new String[]{"--hostname=192.168.17.204", "--port=1099"});
+        assertEquals("192.168.17.204", args.opt("hostname", ""));
+        assertEquals(1099, args.optInt("port", 0));
+    }
+
+    @Test
     void rejectsUnexpectedTokens() {
         assertThrows(IllegalArgumentException.class, () -> CliArgs.parse(new String[]{"DR-001"}));
     }

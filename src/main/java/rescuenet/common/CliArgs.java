@@ -16,6 +16,11 @@ public final class CliArgs {
             if (!token.startsWith("--")) {
                 throw new IllegalArgumentException("Argumento inesperado: " + token);
             }
+            int equals = token.indexOf('=');
+            if (equals > 2) {
+                parsed.values.put(token.substring(2, equals), token.substring(equals + 1));
+                continue;
+            }
             String key = token.substring(2);
             if (i + 1 >= args.length || args[i + 1].startsWith("--")) {
                 parsed.values.put(key, "true");
