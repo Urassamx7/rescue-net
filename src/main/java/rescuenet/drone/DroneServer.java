@@ -5,7 +5,14 @@ import rescuenet.common.Coordinates;
 import rescuenet.common.FleetDirectory;
 import rescuenet.common.NetworkAddresses;
 
+import java.rmi.ConnectException;
 import java.rmi.Naming;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public final class DroneServer {
     private DroneServer() {
@@ -69,6 +76,33 @@ public final class DroneServer {
 
     public static FleetDirectory lookup(String url) throws Exception {
         return (FleetDirectory) Naming.lookup(url);
+    }
+
+    public static FleetDirectory lookup(String url, long timeoutMs) throws Exception {
+        return timed("lookup " + url, timeoutMs, () -> lookup(url));
+    }
+
+    public static <T> T timed(String label, long timeoutMs, Callable<T> call) throws Exception {
+        var pool = Executors.newSingleThreadExecutor(task -> {
+            Thread worker = new Thread(task, "rmi-call");
+            worker.setDaemon(true);
+            return worker;
+        });
+        Future<T> future = pool.submit(call);
+        try {
+            return future.get(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException timeout) {
+            future.cancel(true);
+            throw new ConnectException("Timeout (" + timeoutMs + "ms) em " + label);
+        } catch (ExecutionException error) {
+            Throwable cause = error.getCause() == null ? error : error.getCause();
+            if (cause instanceof Exception exception) {
+                throw exception;
+            }
+            throw new Exception(cause);
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     static FleetDirectory waitForDirectory(String url) throws InterruptedException {

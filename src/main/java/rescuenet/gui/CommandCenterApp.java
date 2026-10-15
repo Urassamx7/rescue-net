@@ -64,7 +64,7 @@ public final class CommandCenterApp extends Application {
         int bind = cli.optInt("bind", 1100);
         String hostname = cli.opt("hostname", "");
         bootServer = EmergencyServer.start(port, bind, hostname.isBlank() ? null : hostname);
-        launch(args);
+        launch();
     }
 
     @Override

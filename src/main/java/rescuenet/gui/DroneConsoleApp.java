@@ -18,6 +18,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
@@ -62,7 +63,7 @@ public final class DroneConsoleApp extends Application {
     private final TextField latField = new TextField();
     private final TextField lonField = new TextField();
     private final TextField batteryField = new TextField("90");
-    private final TextField centralField = new TextField("127.0.0.1:1099");
+    private final TextField centralField = new TextField();
     private final TextField hostnameField = new TextField();
     private final TextField listenField = new TextField("1101");
     private final Button connectButton = new Button("Ligar à central");
@@ -86,12 +87,29 @@ public final class DroneConsoleApp extends Application {
     private static String[] bootArgs = new String[0];
 
     public static void main(String[] args) {
-        bootArgs = args;
-        launch(args);
+        bootArgs = args == null ? new String[0] : args;
+        launch();
     }
 
     @Override
     public void start(Stage stage) {
+        try {
+            startConsole(stage);
+        } catch (Exception error) {
+            error.printStackTrace();
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("RescueNet drone");
+            alert.setHeaderText("A janela não abriu");
+            alert.setContentText(error.toString());
+            alert.showAndWait();
+            if (error instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new RuntimeException(error);
+        }
+    }
+
+    private void startConsole(Stage stage) {
         CliArgs cli = CliArgs.parse(bootArgs);
         fillFromCli(cli);
         setLink("DESLIGADO", "link-down");
@@ -102,7 +120,7 @@ public final class DroneConsoleApp extends Application {
         connectButton.setMaxWidth(Double.MAX_VALUE);
         disconnectButton.setMaxWidth(Double.MAX_VALUE);
         connectButton.setOnAction(_ -> beginConnection());
-        disconnectButton.setOnAction(_ -> shutdown(true));
+        disconnectButton.setOnAction(_ -> disconnect());
         batteryBar.setMaxWidth(Double.MAX_VALUE);
         map.setMinHeight(180);
         map.setPrefHeight(220);
@@ -118,7 +136,10 @@ public final class DroneConsoleApp extends Application {
         status.setText("Indica o IP da central e liga este nó. O heartbeat da outra máquina aparece neste ecrã.");
 
         Scene scene = new Scene(root, 960, 640);
-        scene.getStylesheets().add(getClass().getResource("/rescuenet/gui/command-center.css").toExternalForm());
+        var css = getClass().getResource("/rescuenet/gui/command-center.css");
+        if (css != null) {
+            scene.getStylesheets().add(css.toExternalForm());
+        }
         stage.setTitle(windowTitle());
         stage.setScene(scene);
         stage.show();
@@ -126,7 +147,10 @@ public final class DroneConsoleApp extends Application {
         startClock();
         stage.setOnCloseRequest(_ -> shutdown(true));
 
-        if (!idField.getText().isBlank() && !latField.getText().isBlank() && !lonField.getText().isBlank()) {
+        if (!idField.getText().isBlank()
+                && !latField.getText().isBlank()
+                && !lonField.getText().isBlank()
+                && !centralField.getText().isBlank()) {
             beginConnection();
         }
     }
@@ -137,8 +161,9 @@ public final class DroneConsoleApp extends Application {
         latField.setText(cli.opt("lat", ""));
         lonField.setText(cli.opt("lon", ""));
         batteryField.setText(cli.opt("battery", "90"));
-        centralField.setText(cli.opt("central", "127.0.0.1:1099"));
-        hostnameField.setText(cli.opt("hostname", NetworkAddresses.localHostName()));
+        centralField.setPromptText("192.168.17.204:1099");
+        centralField.setText(cli.opt("central", ""));
+        hostnameField.setText(cli.opt("hostname", safeLocalHost()));
         listenField.setText(Integer.toString(cli.optInt("listen", 1101)));
         centralUrl = centralField.getText().trim();
         registryMeta.setText(DroneServer.directoryUrl(centralUrl));
@@ -253,6 +278,7 @@ public final class DroneConsoleApp extends Application {
 
     private void beginConnection() {
         if (running) {
+            status.setText("Já a tentar ligar a " + DroneServer.directoryUrl(centralUrl) + ". Usa Desligar para mudar o IP.");
             return;
         }
         try {
@@ -312,11 +338,16 @@ public final class DroneConsoleApp extends Application {
                 }
                 if (!joined) {
                     String url = DroneServer.directoryUrl(centralUrl);
-                    FleetDirectory dir = DroneServer.lookup(url);
+                    Platform.runLater(() -> status.setText("A contactar " + url));
+                    FleetDirectory dir = DroneServer.lookup(url, 3_000);
                     if (!running || drone == null) {
                         return;
                     }
-                    dir.join(drone.localSnapshot(), drone);
+                    DroneServiceImpl node = drone;
+                    DroneServer.timed("join " + url, 3_000, () -> {
+                        dir.join(node.localSnapshot(), node);
+                        return null;
+                    });
                     directory = dir;
                     joined = true;
                     joinedAt = Instant.now();
@@ -341,10 +372,11 @@ public final class DroneConsoleApp extends Application {
                     return;
                 }
                 joined = false;
+                error.printStackTrace();
                 Platform.runLater(() -> {
                     setLink("CENTRAL INALCANÇÁVEL", "link-down");
                     centralField.setDisable(false);
-                    status.setText("Central inalcançável — a repetir. " + shortError(error));
+                    status.setText("Falhou o join — a repetir. " + shortError(error));
                 });
             }
             try {
@@ -409,11 +441,12 @@ public final class DroneConsoleApp extends Application {
         clock.setText(LocalTime.now().format(CLOCK));
     }
 
-    private void shutdown(boolean exit) {
+    private void disconnect() {
         running = false;
         joined = false;
         if (connector != null) {
             connector.interrupt();
+            connector = null;
         }
         FleetDirectory dir = directory;
         directory = null;
@@ -430,6 +463,15 @@ public final class DroneConsoleApp extends Application {
         if (node != null) {
             node.shutdown();
         }
+        lockIdentityFields(false);
+        connectButton.setDisable(false);
+        disconnectButton.setDisable(true);
+        setLink("DESLIGADO", "link-down");
+        status.setText("Desligado. Corrige o IP da central e volta a Ligar.");
+    }
+
+    private void shutdown(boolean exit) {
+        disconnect();
         if (exit) {
             Platform.exit();
             System.exit(0);
@@ -455,6 +497,14 @@ public final class DroneConsoleApp extends Application {
     private String windowTitle() {
         String id = idField.getText().isBlank() ? "drone" : idField.getText().trim();
         return "RescueNet · " + id;
+    }
+
+    private static String safeLocalHost() {
+        try {
+            return NetworkAddresses.localHostName();
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     private static String shortError(Exception error) {
